@@ -1,8 +1,15 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./auth/AuthContext";
 import Login from "./pages/Login";
-// import Dashboard from "./pages/Dashboard";
+import Dashboard from "./pages/Dashboard";
 import ProtectedRoute from "./routes/ProtectedRoute";
+import Register from "./pages/Register";
+
+import EmployeeDashboard from "./pages/Employee/Dashboard";
+import CreateRequest from "./pages/Employee/CreateRequest";
+import MyRequests from "./pages/Employee/MyRequests";
+import RequestDetail from "./pages/Employee/RequestDetail";
+
 
 export default function App() {
   return (
@@ -15,7 +22,43 @@ export default function App() {
             path="/"
             element={
               <ProtectedRoute>
-                {/* <Dashboard /> */}
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="/register" element={<Register />}></Route>
+          <Route
+            path="/employee"
+            element={
+              <ProtectedRoute>
+                <EmployeeDashboard />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/employee/create"
+            element={
+              <ProtectedRoute>
+                <CreateRequest />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/employee/requests"
+            element={
+              <ProtectedRoute>
+                <MyRequests />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/employee/requests/:id"
+            element={
+              <ProtectedRoute>
+                <RequestDetail />
               </ProtectedRoute>
             }
           />
