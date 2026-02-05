@@ -25,6 +25,19 @@ class Request(models.Model):
     def __str__(self):
         return f"{self.request_type} - {self.title} - {self.created_by.email}"
 
+class RequestDocument(models.Model):
+
+    request = models.ForeignKey(
+        Request,
+        on_delete=models.CASCADE,
+        related_name="documents"
+    )
+
+    file = models.FileField(upload_to="request_docs/")
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Doc for Request {self.request.id}"
 
 
 
@@ -37,7 +50,7 @@ class RequestHistory(models.Model):
     action = models.CharField(max_length=100)
     comment = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
-    
+
     def __str__(self):
         return f"Request {self.request.id} - {self.action} by {self.action_by.email if self.action_by else 'System'}"
 

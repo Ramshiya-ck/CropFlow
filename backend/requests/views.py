@@ -11,6 +11,11 @@ from .serializers import RequestSerializer
 from workflows.models import ApprovalFlow, WorkflowStep, RequestWorkFlow
 from workflows.services import approve_request, reject_request
 
+from rest_framework.views import APIView
+from rest_framework.parsers import MultiPartParser, FormParser
+from .models import RequestDocument
+
+
 
 class CreateRequestAPIView(generics.CreateAPIView):
 
@@ -96,3 +101,35 @@ class RejectRequestAPIView(APIView):
                 {"detail": "Not allowed to reject"},
                 status=status.HTTP_403_FORBIDDEN
             )
+
+
+
+class UploadRequestDocumentAPIView(APIView):
+
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request, pk):
+
+        req = get_object_or_404(Request, pk=pk)
+
+        file = request.FILES.get("file")
+
+        if not file:
+            return Response({"error": "No file uploaded"}, status=400)
+
+        doc = RequestDocument.objects.create(
+            request=req,
+            file=file
+        )
+
+        return Response(
+            {"id": doc.id, "file": doc.file.url},
+            status=201
+        )
+
+class RequestsListAPIView(generics.ListAPIView):
+    serializer_class = RequestSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return Request.objects.filter(created_by=self.request.user)
