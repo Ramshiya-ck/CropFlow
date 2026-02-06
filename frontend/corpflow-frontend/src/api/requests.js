@@ -8,3 +8,6 @@ export const myRequests = () =>
 
 export const getRequestDetail = (id) =>
   api.get(`requests/${id}/`);
+
+// export const getDashboardData = () =>
+//   api.get("requests/dashboard/");

@@ -3,10 +3,15 @@ import { createRequest } from "../../api/requests";
 import { useNavigate } from "react-router-dom";
 
 export default function CreateRequest() {
+  const [title, setTitle] = useState("");
   const [type, setType] = useState("");
-  const [data, setData] = useState({});
-  const [loading, setLoading] = useState(false);
 
+  const [data, setData] = useState({
+    reason: "",
+    amount: "",
+  });
+
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const submit = async (e) => {
@@ -16,6 +21,7 @@ export default function CreateRequest() {
       setLoading(true);
 
       await createRequest({
+        title,
         request_type: type,
         data,
       });
@@ -23,6 +29,7 @@ export default function CreateRequest() {
       alert("Request submitted successfully!");
       navigate("/employee/requests");
     } catch (err) {
+      console.error(err);
       alert("Failed to submit request");
     } finally {
       setLoading(false);
@@ -38,7 +45,7 @@ export default function CreateRequest() {
           Create New Request
         </h1>
         <p className="text-sm text-gray-500">
-          Submit a new request for approval workflow
+          Enter request details to start approval workflow.
         </p>
       </div>
 
@@ -47,7 +54,21 @@ export default function CreateRequest() {
 
         <form onSubmit={submit} className="grid grid-cols-1 md:grid-cols-2 gap-5">
 
-          {/* Request Type */}
+          {/* TITLE */}
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium mb-1">
+              Request Title
+            </label>
+            <input
+              required
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="For Asset / Medical Leave"
+              className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-600"
+            />
+          </div>
+
+          {/* TYPE */}
           <div>
             <label className="block text-sm font-medium mb-1">
               Request Type
@@ -65,58 +86,42 @@ export default function CreateRequest() {
             </select>
           </div>
 
-          {/* Reason / Item */}
+          {/* REASON / ITEM */}
           <div>
             <label className="block text-sm font-medium mb-1">
               Reason / Item
             </label>
             <input
-              required
-              placeholder="e.g. Medical Leave / Laptop"
-              className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-600"
+              value={data.reason}
               onChange={(e) =>
                 setData({ ...data, reason: e.target.value })
               }
+              placeholder="Laptop / Vacation"
+              className="w-full border rounded-lg p-2"
             />
           </div>
 
-          {/* Amount / Days */}
+          {/* AMOUNT / DAYS */}
           <div>
             <label className="block text-sm font-medium mb-1">
-              Amount / Days
+              Amount / Days / Cost
             </label>
             <input
-              placeholder="e.g. 5 days / ₹45000"
-              className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-600"
+              value={data.amount}
               onChange={(e) =>
                 setData({ ...data, amount: e.target.value })
               }
-            />
-          </div>
-
-          {/* File Upload */}
-          <div>
-            <label className="block text-sm font-medium mb-1">
-              Upload Bill / Document
-            </label>
-            <input
-              type="file"
+              placeholder="75000 / 5 days"
               className="w-full border rounded-lg p-2"
-              onChange={(e) =>
-                setData({
-                  ...data,
-                  bill: e.target.files[0]?.name,
-                })
-              }
             />
           </div>
 
-          {/* Submit */}
+          {/* SUBMIT */}
           <div className="md:col-span-2">
             <button
               disabled={loading}
               type="submit"
-              className="w-full bg-blue-600 text-white py-2 rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-60"
+              className="w-full bg-emerald-600 text-white py-2 rounded-lg font-semibold hover:bg-emerald-700 disabled:opacity-60"
             >
               {loading ? "Submitting..." : "Submit Request"}
             </button>

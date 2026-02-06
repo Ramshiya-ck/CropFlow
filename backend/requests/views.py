@@ -107,7 +107,7 @@ class RejectRequestAPIView(APIView):
 class UploadRequestDocumentAPIView(APIView):
 
     parser_classes = [MultiPartParser, FormParser]
-
+    permission_classes = [permissions.IsAuthenticated]
     def post(self, request, pk):
 
         req = get_object_or_404(Request, pk=pk)
@@ -128,8 +128,28 @@ class UploadRequestDocumentAPIView(APIView):
         )
 
 class RequestsListAPIView(generics.ListAPIView):
-    serializer_class = RequestSerializer
     permission_classes = [permissions.IsAuthenticated]
-
+    serializer_class = RequestSerializer
     def get_queryset(self):
         return Request.objects.filter(created_by=self.request.user)
+    
+class RequestDetailAPIView(generics.RetrieveAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = RequestSerializer
+    queryset = Request.objects.all()    
+
+class EmpolyeeDashboardAPIView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+
+    def get(self, request):
+        user = request.user
+
+        qs = (
+            Request.objects
+            .filter(created_by=user)
+            .order_by("-created_at")[:5]
+        )
+
+        serializer = RequestSerializer(qs, many=True)
+        return Response(serializer.data)
