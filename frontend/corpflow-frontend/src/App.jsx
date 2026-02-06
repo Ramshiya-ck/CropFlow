@@ -10,6 +10,11 @@ import CreateRequest from "./pages/Employee/CreateRequest";
 import MyRequests from "./pages/Employee/MyRequests";
 import RequestDetail from "./pages/Employee/RequestDetail";
 
+// import ManagerDashboard from "./pages/manager/ManagerDashboard";
+// import PendingApprovals from "./pages/manager/PendingApprovals";
+// import ApprovalDetail from "./pages/manager/ApprovalDetail";
+// import RoleRoute from "./routes/RoleRoute";
+
 
 export default function App() {
   return (
@@ -62,6 +67,35 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+
+          {/* <Route
+            path="/manager"
+            element={
+              <RoleRoute role="manager">
+                <ManagerDashboard />
+              </RoleRoute>
+            }
+          />
+
+          <Route
+            path="/manager/pending"
+            element={
+              <RoleRoute role="manager">
+                <PendingApprovals />
+              </RoleRoute>
+            }
+          />
+
+          <Route
+            path="/manager/approvals/:id"
+            element={
+              <RoleRoute role="manager">
+                <ApprovalDetail />
+              </RoleRoute>
+            }
+          /> */}
+
+          
         </Routes>
       </BrowserRouter>
     </AuthProvider>

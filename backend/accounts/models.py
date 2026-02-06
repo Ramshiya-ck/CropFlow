@@ -46,8 +46,12 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return self.email
+    
     def has_role(self, role_name):
-        return self.roles.filter(role__name=role_name).exists()
+        return UserRole.objects.filter(
+            user=self,
+            role__name=role_name
+        ).exists()
 
 
 
@@ -59,9 +63,10 @@ class Role(models.Model):
 
 
 class UserRole(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="roles")
     role = models.ForeignKey(Role, on_delete=models.CASCADE)
 
     class Meta:
         unique_together = ("user", "role")
+        
 

@@ -57,53 +57,6 @@ class CreateRequestAPIView(generics.CreateAPIView):
         )
 
 
-class ApproveRequestAPIView(APIView):
-
-    permission_classes = [permissions.IsAuthenticated]
-
-    def post(self, request, pk):
-
-        req = get_object_or_404(Request, pk=pk)
-
-        try:
-            approve_request(request.user, req)
-            return Response(
-                {"detail": "Approved successfully"},
-                status=status.HTTP_200_OK
-            )
-
-        except PermissionError:
-            return Response(
-                {"detail": "Not allowed to approve"},
-                status=status.HTTP_403_FORBIDDEN
-            )
-
-
-class RejectRequestAPIView(APIView):
-
-    permission_classes = [permissions.IsAuthenticated]
-
-    def post(self, request, pk):
-
-        req = get_object_or_404(Request, pk=pk)
-        comment = request.data.get("comment", "")
-
-        try:
-            reject_request(request.user, req, comment)
-
-            return Response(
-                {"detail": "Rejected successfully"},
-                status=status.HTTP_200_OK
-            )
-
-        except PermissionError:
-            return Response(
-                {"detail": "Not allowed to reject"},
-                status=status.HTTP_403_FORBIDDEN
-            )
-
-
-
 class UploadRequestDocumentAPIView(APIView):
 
     parser_classes = [MultiPartParser, FormParser]
@@ -152,4 +105,75 @@ class EmpolyeeDashboardAPIView(APIView):
         )
 
         serializer = RequestSerializer(qs, many=True)
+        return Response(serializer.data)
+    
+    
+# manager actions
+
+class ApproveRequestAPIView(APIView):
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, pk):
+
+        req = get_object_or_404(Request, pk=pk)
+
+        try:
+            approve_request(request.user, req)
+            return Response(
+                {"detail": "Approved successfully"},
+                status=status.HTTP_200_OK
+            )
+
+        except PermissionError:
+            return Response(
+                {"detail": "Not allowed to approve"},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+
+class RejectRequestAPIView(APIView):
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, pk):
+
+        req = get_object_or_404(Request, pk=pk)
+        comment = request.data.get("comment", "")
+
+        try:
+            reject_request(request.user, req, comment)
+
+            return Response(
+                {"detail": "Rejected successfully"},
+                status=status.HTTP_200_OK
+            )
+
+        except PermissionError:
+            return Response(
+                {"detail": "Not allowed to reject"},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+class ManagerPendingApprovalsAPIView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+
+        if not request.user.has_role("Manager"):
+            return Response(
+                {"message": "Only managers can access this."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        workflows = RequestWorkFlow.objects.select_related(
+            "request",
+            "current_step",
+        ).filter(
+            current_step__role_name='Manager',
+            request__status__in=['pending','in_review']
+        )
+        requests = [wf.request for wf in workflows]
+        serializer = RequestSerializer(requests, many=True)
         return Response(serializer.data)
