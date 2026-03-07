@@ -14,13 +14,14 @@ from workflows.services import approve_request, reject_request
 from rest_framework.views import APIView
 from rest_framework.parsers import MultiPartParser, FormParser
 from .models import RequestDocument
+from .permissions import IsEmployee, IsManager, IsRequestOwner
 
 
 
 class CreateRequestAPIView(generics.CreateAPIView):
 
     serializer_class = RequestSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, IsEmployee]
 
 
     def perform_create(self, serializer):
@@ -60,7 +61,7 @@ class CreateRequestAPIView(generics.CreateAPIView):
 class UploadRequestDocumentAPIView(APIView):
 
     parser_classes = [MultiPartParser, FormParser]
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, IsRequestOwner]
     def post(self, request, pk):
 
         req = get_object_or_404(Request, pk=pk)
@@ -81,18 +82,18 @@ class UploadRequestDocumentAPIView(APIView):
         )
 
 class RequestsListAPIView(generics.ListAPIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, IsEmployee]
     serializer_class = RequestSerializer
     def get_queryset(self):
         return Request.objects.filter(created_by=self.request.user)
     
 class RequestDetailAPIView(generics.RetrieveAPIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, IsRequestOwner]
     serializer_class = RequestSerializer
     queryset = Request.objects.all()    
 
 class EmpolyeeDashboardAPIView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, IsEmployee]
 
 
     def get(self, request):
@@ -112,7 +113,7 @@ class EmpolyeeDashboardAPIView(APIView):
 
 class ApproveRequestAPIView(APIView):
 
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, IsManager]
 
     def post(self, request, pk):
 
@@ -134,7 +135,7 @@ class ApproveRequestAPIView(APIView):
 
 class RejectRequestAPIView(APIView):
 
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, IsManager]
 
     def post(self, request, pk):
 
@@ -156,7 +157,7 @@ class RejectRequestAPIView(APIView):
             )
 
 class ManagerPendingApprovalsAPIView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, IsManager]
 
     def get(self, request):
         user = request.user
