@@ -9,5 +9,16 @@ export const myRequests = () =>
 export const getRequestDetail = (id) =>
   api.get(`requests/${id}/`);
 
-// export const getDashboardData = () =>
-//   api.get("requests/dashboard/");
+
+
+
+// manager actions
+ 
+export const approveRequest = (id) =>
+  api.post(`manager/requests/${id}/approve/`);
+
+export const rejectRequest = (id) =>
+  api.post(`manager/requests/${id}/reject/`);
+
+export const managerPendingRequests = () =>
+  api.get("manager/requests/pending-for-me/");
