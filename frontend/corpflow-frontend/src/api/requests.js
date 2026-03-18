@@ -13,12 +13,12 @@ export const getRequestDetail = (id) =>
 
 
 // manager actions
- 
+
 export const approveRequest = (id) =>
-  api.post(`manager/requests/${id}/approve/`);
+  api.post(`requests/approve/${id}/`);
 
 export const rejectRequest = (id) =>
-  api.post(`manager/requests/${id}/reject/`);
+  api.post(`requests/reject/${id}/`);
 
 export const managerPendingRequests = () =>
-  api.get("manager/requests/pending-for-me/");
+  api.get("requests/pending-for-me/");

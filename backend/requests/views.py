@@ -11,10 +11,11 @@ from .serializers import RequestSerializer
 from workflows.models import ApprovalFlow, WorkflowStep, RequestWorkFlow
 from workflows.services import approve_request, reject_request
 
-from rest_framework.views import APIView
+from rest_framework import viewsets, mixins
 from rest_framework.parsers import MultiPartParser, FormParser
 from .models import RequestDocument
-from .permissions import IsEmployee, IsManager, IsRequestOwner
+from .serializers import RequestSerializer, RequestDocumentSerializer
+from .permissions import IsEmployee, IsManager, IsRequestOwner, IsDocumentOwnerOrAdmin
 
 
 
@@ -113,7 +114,7 @@ class EmpolyeeDashboardAPIView(APIView):
 
 class ApproveRequestAPIView(APIView):
 
-    permission_classes = [permissions.IsAuthenticated, IsManager]
+    permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request, pk):
 
@@ -135,7 +136,7 @@ class ApproveRequestAPIView(APIView):
 
 class RejectRequestAPIView(APIView):
 
-    permission_classes = [permissions.IsAuthenticated, IsManager]
+    permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request, pk):
 
@@ -157,14 +158,17 @@ class RejectRequestAPIView(APIView):
             )
 
 class ManagerPendingApprovalsAPIView(APIView):
-    permission_classes = [permissions.IsAuthenticated, IsManager]
+    permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
         user = request.user
-
-        if not request.user.has_role("Manager"):
+        
+        # Get all role names for the current user
+        user_roles = user.roles.values_list('role__name', flat=True)
+        
+        if not user_roles:
             return Response(
-                {"message": "Only managers can access this."},
+                {"message": "You do not have any approver roles."},
                 status=status.HTTP_403_FORBIDDEN
             )
         
@@ -172,13 +176,43 @@ class ManagerPendingApprovalsAPIView(APIView):
             "request",
             "current_step",
         ).filter(
-            current_step__role_name='Manager',
+            current_step__role_name__in=user_roles,
             request__status__in=['pending','in_review']
         )
         requests = [wf.request for wf in workflows]
         serializer = RequestSerializer(requests, many=True)
         return Response(serializer.data)
-    
 
-    
 
+class RequestDocumentListAPIView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, request_id):
+        req = get_object_or_404(Request, pk=request_id)
+        
+        if not (request.user.is_superuser or request.user.has_role("IT Admin") or req.created_by == request.user):
+            return Response(
+                {"detail": "You do not have permission to view these documents."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+            
+        docs = req.documents.all()
+        serializer = RequestDocumentSerializer(docs, many=True)
+        return Response(serializer.data)
+
+
+class RequestDocumentDeleteAPIView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def delete(self, request, pk):
+        doc = get_object_or_404(RequestDocument, pk=pk)
+        
+        # Checking request.created_by as the uploader because only the request owner can upload documents
+        if not (request.user.is_superuser or request.user.has_role("IT Admin") or doc.request.created_by == request.user):
+            return Response(
+                {"detail": "You do not have permission to delete this document."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+            
+        doc.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)

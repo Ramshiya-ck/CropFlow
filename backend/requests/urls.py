@@ -1,9 +1,14 @@
 from django.urls import path
-from .views import CreateRequestAPIView, ApproveRequestAPIView,RejectRequestAPIView, UploadRequestDocumentAPIView, RequestsListAPIView, RequestDetailAPIView, EmpolyeeDashboardAPIView,ManagerPendingApprovalsAPIView
-
+from .views import (
+    CreateRequestAPIView, ApproveRequestAPIView, RejectRequestAPIView, 
+    UploadRequestDocumentAPIView, RequestsListAPIView, RequestDetailAPIView, 
+    EmpolyeeDashboardAPIView, ManagerPendingApprovalsAPIView, 
+    RequestDocumentListAPIView
+)
 
 urlpatterns = [
     path('my/', RequestsListAPIView.as_view()),
+    path('<int:request_id>/documents/', RequestDocumentListAPIView.as_view()),
     path('create/', CreateRequestAPIView.as_view()),
     path("<int:pk>/upload/", UploadRequestDocumentAPIView.as_view()),
     path("<int:pk>/", RequestDetailAPIView.as_view()),
