@@ -1,13 +1,36 @@
-from accounts.models import Role, Feature, RolePermission
-
 def seed_data():
-    roles = ['admin', 'employee', 'manager', 'finance']
+    from accounts.models import Role, Feature, RolePermission
+    roles = ['admin', 'employee', 'manager', 'finance', 'it', 'hr']
     for role_name in roles:
         Role.objects.get_or_create(name=role_name)
 
     features = [
+        # Employee features
         ('Create Request', 'Ability to create new workflow requests'),
-        ('Approve Workflow', 'Ability to approve or reject requests'),
+        ('Status Tracking', 'Track request status'),
+        ('Request History', 'View request approval timeline'),
+        ('Uploaded Bills', 'View uploaded request documents'),
+
+        # HR features
+        ('Leave Approval', 'Ability to approve or reject leave requests'),
+        ('Employee History', 'View full employment and request history'),
+        ('Policy Checks', 'Digital checklist for corporate policies'),
+        ('Final Clearance', 'Manage employee exit/clearance workflow'),
+
+        # Finance features
+        ('Asset Approval', 'Review and approve asset purchase requests'),
+        ('Travel Approval', 'Review and approve travel expense requests'),
+        ('Invoice Review', 'Review and flag invoices for payment'),
+        ('Budget Monitoring', 'View budget flags and spend analytics'),
+        ('Payment Management', 'Update payment status for approved invoices'),
+
+        # IT features
+        ('Asset Provisioning', 'Setup and prepare hardware/software for users'),
+        ('Device Assignment', 'Link serial numbers to specific users'),
+        ('Software Request', 'Manage software license requests'),
+        ('Security Checks', 'Security audit and compliance monitoring'),
+
+        # Admin/others
         ('View Reports', 'Access to financial and operational reports'),
         ('Manage Users', 'Admin ability to manage user roles and permissions'),
     ]
@@ -22,11 +45,41 @@ def seed_data():
             
             if role_name == 'admin':
                 can_access = True
-            elif role_name == 'employee' and feat_name == 'Create Request':
+            elif role_name == 'employee' and feat_name in [
+                'Create Request',
+                'Status Tracking',
+                'Request History',
+                'Uploaded Bills',
+            ]:
                 can_access = True
-            elif role_name == 'manager' and feat_name in ['Approve Workflow', 'Create Request']:
+            elif role_name == 'manager' and feat_name in [
+                'Approve Workflow',
+                'Team Request',
+                'Request Detail',
+            ]:
                 can_access = True
-            elif role_name == 'finance' and feat_name == 'View Reports':
+            elif role_name == 'finance' and feat_name in [
+                'View Reports',
+                'Asset Approval',
+                'Travel Approval',
+                'Invoice Review',
+                'Budget Monitoring',
+                'Payment Management',
+            ]:
+                can_access = True
+            elif role_name == 'hr' and feat_name in [
+                'Leave Approval',
+                'Employee History',
+                'Policy Checks',
+                'Final Clearance',
+            ]:
+                can_access = True
+            elif role_name == 'it' and feat_name in [
+                'Asset Provisioning',
+                'Device Assignment',
+                'Software Request',
+                'Security Checks',
+            ]:
                 can_access = True
                 
             RolePermission.objects.get_or_create(role=role, feature=feature, defaults={'can_access': can_access})
@@ -36,6 +89,6 @@ def seed_data():
 if __name__ == "__main__":
     import os
     import django
-    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
+    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'corpflow.settings')
     django.setup()
     seed_data()

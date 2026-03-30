@@ -1,20 +1,33 @@
-import { createContext, useState, useEffect } from "react";
+/* eslint-disable react-refresh/only-export-components */
+import { createContext, useState, useEffect, useCallback } from "react";
 import api from "../api/axios";
 
 export const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(() => {
+    const token = localStorage.getItem("accessToken");
+    const storedUser = localStorage.getItem("user");
+    if (!token || !storedUser) return null;
+    try {
+      return JSON.parse(storedUser);
+    } catch {
+      return null;
+    }
+  });
   const [permissions, setPermissions] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const fetchPermissions = async () => {
+  const fetchPermissions = useCallback(async () => {
     try {
       const res = await api.get("accounts/my-permissions/");
       setPermissions(res.data.map(p => p.feature_name));
     } catch (err) {
       console.error("Failed to fetch permissions", err);
+    } finally {
+      setLoading(false);
     }
-  };
+  }, []);
 
   const login = async (email, password) => {
     const res = await api.post("accounts/login/", {
@@ -24,6 +37,7 @@ export function AuthProvider({ children }) {
 
     localStorage.setItem("accessToken", res.data.access);
     localStorage.setItem("refreshToken", res.data.refresh);
+    localStorage.setItem("user", JSON.stringify(res.data.user));
 
     setUser(res.data.user);
     await fetchPermissions();
@@ -34,24 +48,27 @@ export function AuthProvider({ children }) {
     localStorage.clear();
     setUser(null);
     setPermissions([]);
+    setLoading(false);
   };
 
   const hasPermission = (featureName) => {
-    if (user?.roles?.includes("admin")) return true;
+    const roles = user?.roles || [];
+    if (roles.some((r) => String(r).toLowerCase() === "admin")) return true;
     return permissions.includes(featureName);
   };
 
-  // Re-fetch permissions on mount if user is logged in
+  // Re-fetch permissions when we have a user restored/logged-in.
   useEffect(() => {
     const token = localStorage.getItem("accessToken");
-    if (token && !user) {
-      // Logic to restore user session could go here if needed
-      // For now, assume login handles it
+    if (token && user) {
+      fetchPermissions();
+    } else {
+      setLoading(false);
     }
-  }, []);
+  }, [fetchPermissions, user]);
 
   return (
-    <AuthContext.Provider value={{ user, permissions, login, logout, hasPermission }}>
+    <AuthContext.Provider value={{ user, permissions, login, logout, hasPermission, loading }}>
       {children}
     </AuthContext.Provider>
   );

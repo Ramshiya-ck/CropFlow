@@ -50,7 +50,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     def has_role(self, role_name):
         return UserRole.objects.filter(
             user=self,
-            role__name=role_name
+            role__name__iexact=role_name
         ).exists()
 
 

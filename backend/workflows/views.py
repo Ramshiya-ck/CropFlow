@@ -11,7 +11,12 @@ class IsAdminOrIT(BasePermission):
     def has_permission(self, request, view):
         if not request.user or not request.user.is_authenticated:
             return False
-        return request.user.is_superuser or request.user.has_role("IT Admin") or request.user.has_role("Super Admin")
+        return (
+            request.user.is_superuser
+            or request.user.has_role("IT Admin")
+            or request.user.has_role("it")
+            or request.user.has_role("Super Admin")
+        )
 
 class ApprovalFlowViewSet(viewsets.ModelViewSet):
     queryset = ApprovalFlow.objects.all()

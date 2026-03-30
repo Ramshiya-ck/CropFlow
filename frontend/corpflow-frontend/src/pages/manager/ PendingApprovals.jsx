@@ -78,7 +78,7 @@ export default function PendingApprovals() {
                     Reject
                   </button>
                   <Link
-                    to={`/manager/requests/${r.id}`}
+                    to={`/manager/approvals/${r.id}`}
                     className="bg-blue-500 text-white px-3 py-1 rounded text-xs hover:bg-blue-600 ml-2"
                   >
                     Details

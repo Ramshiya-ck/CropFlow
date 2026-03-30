@@ -28,6 +28,10 @@ export default function Login() {
           navigate("/manager");
         } else if (role === "finance") {
           navigate("/finance");
+        } else if (role === "it") {
+          navigate("/it");
+        } else if (role === "hr") {
+          navigate("/hr");
         } else if (role === "admin") {
           navigate("/admin");
         } else {
@@ -36,7 +40,7 @@ export default function Login() {
       } else {
         navigate("/");
       }
-    } catch (err) {
+    } catch {
       setError("Invalid email or password. Please try again.");
     } finally {
       setLoading(false);

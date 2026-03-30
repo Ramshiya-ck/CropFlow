@@ -17,9 +17,17 @@ def approve_request(user, request_obj):
         workflow = locked_request.workflow
         step = workflow.current_step
 
-        # Role validation
-        if not UserRole.objects.filter(user=user, role__name=step.role_name).exists():
-            raise PermissionError("User not allowed to approve")
+        # Role validation (case-insensitive + IT alias handling)
+        step_role = (step.role_name or "").strip()
+        step_role_norm = step_role.lower().replace("-", " ")
+        is_it_step = step_role_norm in ["it", "it admin"]
+
+        if is_it_step:
+            if not (user.has_role("it") or user.has_role("IT Admin")):
+                raise PermissionError("User not allowed to approve")
+        else:
+            if not UserRole.objects.filter(user=user, role__name__iexact=step.role_name).exists():
+                raise PermissionError("User not allowed to approve")
 
         # Move step
         next_step = (
@@ -68,8 +76,16 @@ def reject_request(user, request_obj, comment=""):
         workflow = locked_request.workflow
         step = workflow.current_step
 
-        if not UserRole.objects.filter(user=user, role__name=step.role_name).exists():
-            raise PermissionError("User not allowed to reject")
+        step_role = (step.role_name or "").strip()
+        step_role_norm = step_role.lower().replace("-", " ")
+        is_it_step = step_role_norm in ["it", "it admin"]
+
+        if is_it_step:
+            if not (user.has_role("it") or user.has_role("IT Admin")):
+                raise PermissionError("User not allowed to reject")
+        else:
+            if not UserRole.objects.filter(user=user, role__name__iexact=step.role_name).exists():
+                raise PermissionError("User not allowed to reject")
 
         locked_request.status = 'rejected'
         locked_request.save()

@@ -32,7 +32,7 @@ class IsRequestOwnerOrAdmin(BasePermission):
     Allow only owner of request or admin
     """
     def has_object_permission(self, request, view, obj):
-        if request.user.is_superuser or request.user.has_role("IT Admin"):
+        if request.user.is_superuser or request.user.has_role("IT Admin") or request.user.has_role("it"):
             return True
         return obj.created_by == request.user
 
@@ -41,6 +41,6 @@ class IsDocumentOwnerOrAdmin(BasePermission):
     Allow only owner of the related request or admin
     """
     def has_object_permission(self, request, view, obj):
-        if request.user.is_superuser or request.user.has_role("IT Admin"):
+        if request.user.is_superuser or request.user.has_role("IT Admin") or request.user.has_role("it"):
             return True
         return obj.request.created_by == request.user

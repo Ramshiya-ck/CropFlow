@@ -3,10 +3,12 @@ import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../auth/AuthContext";
 
 export default function Landing() {
-  const { user } = useContext(AuthContext);
+  const { user, loading } = useContext(AuthContext);
   const navigate = useNavigate();
 
   useEffect(() => {
+    if (loading) return;
+
     if (user && user.roles && user.roles.length > 0) {
       const role = user.roles[0].toLowerCase();
       if (role === "employee") {
@@ -15,6 +17,10 @@ export default function Landing() {
         navigate("/manager");
       } else if (role === "finance") {
         navigate("/finance");
+      } else if (role === "it") {
+        navigate("/it");
+      } else if (role === "hr") {
+        navigate("/hr");
       } else if (role === "admin") {
         navigate("/admin");
       } else {
@@ -25,7 +31,7 @@ export default function Landing() {
       // If no role or user not loaded properly, go to login or a default
       navigate("/login");
     }
-  }, [user, navigate]);
+  }, [user, loading, navigate]);
 
   return (
     <div className="min-h-screen bg-[#0f172a] flex items-center justify-center">

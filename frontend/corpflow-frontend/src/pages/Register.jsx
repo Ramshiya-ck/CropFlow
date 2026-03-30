@@ -38,7 +38,7 @@ export default function Register() {
       });
 
       navigate("/login");
-    } catch (err) {
+    } catch {
       setError("Registration failed. Please check your details.");
     } finally {
       setLoading(false);
@@ -105,6 +105,8 @@ export default function Register() {
                   <option value="employee" className="bg-[#1e293b]">Employee</option>
                   <option value="manager" className="bg-[#1e293b]">Manager</option>
                   <option value="finance" className="bg-[#1e293b]">Finance</option>
+                  <option value="it" className="bg-[#1e293b]">IT</option>
+                  <option value="hr" className="bg-[#1e293b]">HR</option>
                 </select>
               </div>
             </div>

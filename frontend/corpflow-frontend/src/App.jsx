@@ -13,6 +13,11 @@ import PendingApprovals from "./pages/manager/ PendingApprovals.jsx";
 import ApprovalDetail from "./pages/manager/ApprovalDetail";
 import RoleRoute from "./routes/RoleRoute";
 import AdminDashboard from "./pages/Admin/Dashboard";
+import History from "./pages/Employee/History";
+import UploadedBills from "./pages/Employee/UploadedBills";
+import FinanceDashboard from "./pages/Finance/Dashboard";
+import ITDashboard from "./pages/IT/Dashboard";
+import HRDashboard from "./pages/HR/Dashboard";
 
 
 export default function App() {
@@ -68,6 +73,33 @@ export default function App() {
           />
 
           <Route
+            path="/employee/status"
+            element={
+              <ProtectedRoute>
+                <MyRequests />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/employee/history"
+            element={
+              <ProtectedRoute>
+                <History />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/employee/bills"
+            element={
+              <ProtectedRoute>
+                <UploadedBills />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
             path="/manager"
             element={
               <RoleRoute role="manager">
@@ -98,6 +130,33 @@ export default function App() {
             element={
               <RoleRoute role="admin">
                 <AdminDashboard />
+              </RoleRoute>
+            }
+          />
+
+          <Route
+            path="/finance"
+            element={
+              <RoleRoute role="finance">
+                <FinanceDashboard />
+              </RoleRoute>
+            }
+          />
+
+          <Route
+            path="/it"
+            element={
+              <RoleRoute role="it">
+                <ITDashboard />
+              </RoleRoute>
+            }
+          />
+
+          <Route
+            path="/hr"
+            element={
+              <RoleRoute role="hr">
+                <HRDashboard />
               </RoleRoute>
             }
           />

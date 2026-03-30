@@ -25,6 +25,41 @@ class RegisterSerializer(serializers.ModelSerializer):
         role, _ = Role.objects.get_or_create(name=role_name)
         UserRole.objects.create(user=user, role=role)
 
+        # Ensure RolePermission rows exist for this role so the admin matrix
+        # can show/toggle access immediately (especially for new roles like IT/HR).
+        for feature in Feature.objects.all():
+            can_access = False
+            if role_name == "admin":
+                can_access = True
+            elif role_name == "employee" and feature.name in [
+                "Create Request",
+                "Status Tracking",
+                "Request History",
+                "Uploaded Bills",
+            ]:
+                can_access = True
+            elif role_name == "finance" and feature.name in [
+                "View Reports", "Asset Approval", "Travel Approval", 
+                "Invoice Review", "Budget Monitoring", "Payment Management"
+            ]:
+                can_access = True
+            elif role_name == "it" and feature.name in [
+                "Asset Provisioning", "Device Assignment", 
+                "Software Request", "Security Checks"
+            ]:
+                can_access = True
+            elif role_name == "hr" and feature.name in [
+                "Leave Approval", "Employee History", 
+                "Policy Checks", "Final Clearance"
+            ]:
+                can_access = True
+
+            RolePermission.objects.get_or_create(
+                role=role,
+                feature=feature,
+                defaults={"can_access": can_access},
+            )
+
         return user
 
 
@@ -47,10 +82,11 @@ class FeatureSerializer(serializers.ModelSerializer):
 
 class RolePermissionSerializer(serializers.ModelSerializer):
     feature_name = serializers.ReadOnlyField(source="feature.name")
+    role_name = serializers.ReadOnlyField(source="role.name")
 
     class Meta:
         model = RolePermission
-        fields = ["id", "role", "feature", "feature_name", "can_access"]
+        fields = ["id", "role", "role_name", "feature", "feature_name", "can_access"]
 
 
 class CustomTokenSerializer(TokenObtainPairSerializer):

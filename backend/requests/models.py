@@ -9,12 +9,21 @@ class Request(models.Model):
         ('rejected', 'Rejected'),
         ('in_review', 'In Review'),
     ]
+    DEPARTMENT_CHOICES = [
+        ('HR', 'HR'),
+        ('FINANCE', 'Finance'),
+        ('IT', 'IT'),
+        ('GENERAL', 'General'),
+    ]
     title = models.CharField(max_length=255)
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name='requests')
     request_type = models.CharField(max_length=100)
+    department = models.CharField(
+        max_length=20, choices=DEPARTMENT_CHOICES, default='GENERAL'
+    )
     status = models.CharField(
         max_length=20, choices=STATUS_CHOICES, default='pending')
     created_at = models.DateTimeField(auto_now_add=True)
@@ -23,7 +32,32 @@ class Request(models.Model):
     
 
     def __str__(self):
-        return f"{self.request_type} - {self.title} - {self.created_by.email}"
+        return f"{self.department} - {self.request_type} - {self.title}"
+
+class Asset(models.Model):
+    STATUS_CHOICES = [
+        ('available', 'Available'),
+        ('assigned', 'Assigned'),
+        ('maintenance', 'Maintenance'),
+    ]
+    name = models.CharField(max_length=255)
+    asset_type = models.CharField(max_length=100) # e.g. Laptop, Software, Monitor
+    serial_number = models.CharField(max_length=255, unique=True, null=True, blank=True)
+    assigned_to = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='assets'
+    )
+    status = models.CharField(
+        max_length=20, choices=STATUS_CHOICES, default='available'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.name} ({self.asset_type}) - {self.status}"
 
 class RequestDocument(models.Model):
 

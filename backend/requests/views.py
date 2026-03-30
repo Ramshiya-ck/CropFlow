@@ -5,8 +5,8 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.views import APIView
 from rest_framework.response import Response
 
-from .models import Request, RequestHistory
-from .serializers import RequestSerializer
+from .models import Request, RequestHistory, Asset
+from .serializers import RequestSerializer, MyRequestDocumentSerializer, MyRequestHistorySerializer, AssetSerializer
 
 from workflows.models import ApprovalFlow, WorkflowStep, RequestWorkFlow
 from workflows.services import approve_request, reject_request
@@ -16,6 +16,7 @@ from rest_framework.parsers import MultiPartParser, FormParser
 from .models import RequestDocument
 from .serializers import RequestSerializer, RequestDocumentSerializer
 from .permissions import IsEmployee, IsManager, IsRequestOwner, IsDocumentOwnerOrAdmin
+from accounts.permissions import IsAdmin
 
 
 
@@ -89,9 +90,43 @@ class RequestsListAPIView(generics.ListAPIView):
         return Request.objects.filter(created_by=self.request.user)
     
 class RequestDetailAPIView(generics.RetrieveAPIView):
-    permission_classes = [permissions.IsAuthenticated, IsRequestOwner]
+    """
+    Allow:
+    - Request owner (employee)
+    - Approvers for the current workflow step (manager/admin/IT depending on roles)
+    - Superusers
+    """
+    permission_classes = [permissions.IsAuthenticated]
     serializer_class = RequestSerializer
-    queryset = Request.objects.all()    
+    queryset = Request.objects.all()
+
+    def get_object(self):
+        obj = super().get_object()
+        user = self.request.user
+
+        if user.is_superuser or obj.created_by == user:
+            return obj
+
+        # Allow approvers based on current workflow step role.
+        # Request has a OneToOne relation named `workflow` (see workflows/models.py).
+        try:
+            wf = obj.workflow
+        except Exception:
+            wf = None
+
+        step = getattr(wf, "current_step", None) if wf else None
+        step_role = getattr(step, "role_name", None) if step else None
+
+        # IT Admins can always view request details.
+        if user.has_role("IT Admin") or user.has_role("it"):
+            return obj
+
+        if step_role and user.has_role(step_role):
+            return obj
+
+        from rest_framework.exceptions import PermissionDenied
+
+        raise PermissionDenied("You do not have permission to view this request.")
 
 class EmpolyeeDashboardAPIView(APIView):
     permission_classes = [permissions.IsAuthenticated, IsEmployee]
@@ -171,15 +206,24 @@ class ManagerPendingApprovalsAPIView(APIView):
                 {"message": "You do not have any approver roles."},
                 status=status.HTTP_403_FORBIDDEN
             )
-        
+
+        # Case-insensitive match for step role names.
+        user_roles_norm = {str(r).strip().lower() for r in user_roles if r}
+
         workflows = RequestWorkFlow.objects.select_related(
             "request",
             "current_step",
         ).filter(
-            current_step__role_name__in=user_roles,
             request__status__in=['pending','in_review']
         )
-        requests = [wf.request for wf in workflows]
+
+        # Filter in Python to avoid DB collation/casing issues with __in.
+        requests = [
+            wf.request
+            for wf in workflows
+            if wf.current_step
+            and str(wf.current_step.role_name).strip().lower() in user_roles_norm
+        ]
         serializer = RequestSerializer(requests, many=True)
         return Response(serializer.data)
 
@@ -190,7 +234,7 @@ class RequestDocumentListAPIView(APIView):
     def get(self, request, request_id):
         req = get_object_or_404(Request, pk=request_id)
         
-        if not (request.user.is_superuser or request.user.has_role("IT Admin") or req.created_by == request.user):
+        if not (request.user.is_superuser or request.user.has_role("IT Admin") or request.user.has_role("it") or req.created_by == request.user):
             return Response(
                 {"detail": "You do not have permission to view these documents."},
                 status=status.HTTP_403_FORBIDDEN
@@ -201,6 +245,34 @@ class RequestDocumentListAPIView(APIView):
         return Response(serializer.data)
 
 
+class AdminDashboardStatsAPIView(APIView):
+    permission_classes = [permissions.IsAuthenticated, IsAdmin]
+
+    def get(self, request):
+        total_requests = Request.objects.count()
+        pending_requests = Request.objects.filter(status='pending').count()
+        approved_requests = Request.objects.filter(status='approved').count()
+        rejected_requests = Request.objects.filter(status='rejected').count()
+
+        dept_breakdown = {}
+        for dept in ['HR', 'FINANCE', 'IT', 'GENERAL']:
+            dept_breakdown[dept] = Request.objects.filter(department=dept).count()
+
+        type_breakdown = {}
+        types = Request.objects.values_list('request_type', flat=True).distinct()
+        for t in types:
+            type_breakdown[t] = Request.objects.filter(request_type=t).count()
+
+        return Response({
+            "total": total_requests,
+            "pending": pending_requests,
+            "approved": approved_requests,
+            "rejected": rejected_requests,
+            "department_breakdown": dept_breakdown,
+            "type_breakdown": type_breakdown,
+        })
+
+
 class RequestDocumentDeleteAPIView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
@@ -208,7 +280,7 @@ class RequestDocumentDeleteAPIView(APIView):
         doc = get_object_or_404(RequestDocument, pk=pk)
         
         # Checking request.created_by as the uploader because only the request owner can upload documents
-        if not (request.user.is_superuser or request.user.has_role("IT Admin") or doc.request.created_by == request.user):
+        if not (request.user.is_superuser or request.user.has_role("IT Admin") or request.user.has_role("it") or doc.request.created_by == request.user):
             return Response(
                 {"detail": "You do not have permission to delete this document."},
                 status=status.HTTP_403_FORBIDDEN
@@ -216,3 +288,82 @@ class RequestDocumentDeleteAPIView(APIView):
             
         doc.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class MyDocumentsAPIView(APIView):
+    permission_classes = [permissions.IsAuthenticated, IsEmployee]
+
+    def get(self, request):
+        docs = (
+            RequestDocument.objects
+            .filter(request__created_by=request.user)
+            .select_related("request")
+            .order_by("-uploaded_at")
+        )
+        serializer = MyRequestDocumentSerializer(docs, many=True)
+        return Response(serializer.data)
+
+
+class MyHistoryAPIView(APIView):
+    permission_classes = [permissions.IsAuthenticated, IsEmployee]
+
+    def get(self, request):
+        history = (
+            RequestHistory.objects
+            .filter(request__created_by=request.user)
+            .select_related("request", "action_by")
+            .order_by("-created_at")
+        )
+        serializer = MyRequestHistorySerializer(history, many=True)
+        return Response(serializer.data)
+
+
+# Department Dashboards
+
+class DepartmentDashboardAPIView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, department):
+        # department should be HR, FINANCE, or IT
+        dept = department.upper()
+        if dept not in ['HR', 'FINANCE', 'IT']:
+            return Response({"error": "Invalid department"}, status=400)
+        
+        # Verify user has a role related to this department
+        user_roles = request.user.roles.values_list('role__name', flat=True)
+        if dept.lower() not in [r.lower() for r in user_roles] and not request.user.is_superuser:
+            return Response({"error": "Unauthorized access to this dashboard"}, status=403)
+
+        # Get requests for this department
+        requests = Request.objects.filter(department=dept).order_by("-created_at")
+        
+        # Specialized data
+        data = {
+            "requests": RequestSerializer(requests, many=True).data,
+        }
+
+        if dept == 'IT':
+            assets = Asset.objects.all()
+            data["assets"] = AssetSerializer(assets, many=True).data
+        
+        if dept == 'HR':
+            from accounts.models import User
+            employees = User.objects.all().order_by("name")
+            # Minimal employee info
+            data["employees"] = [
+                {"id": e.id, "name": e.name, "email": e.email}
+                for e in employees
+            ]
+
+        return Response(data)
+
+class AssetViewSet(viewsets.ModelViewSet):
+    queryset = Asset.objects.all()
+    serializer_class = AssetSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_queryset(self):
+        user = self.request.user
+        if user.is_superuser or user.has_role("it"):
+            return Asset.objects.all()
+        return Asset.objects.filter(assigned_to=user)
