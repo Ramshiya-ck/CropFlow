@@ -1,19 +1,18 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./auth/AuthContext";
 import Login from "./pages/Login";
-import Dashboard from "./pages/Dashboard";
-import ProtectedRoute from "./routes/ProtectedRoute";
 import Register from "./pages/Register";
-
+import ProtectedRoute from "./routes/ProtectedRoute";
+import Landing from "./pages/Landing";
 import EmployeeDashboard from "./pages/Employee/Dashboard";
 import CreateRequest from "./pages/Employee/CreateRequest";
 import MyRequests from "./pages/Employee/MyRequests";
 import RequestDetail from "./pages/Employee/RequestDetail";
-
-// import ManagerDashboard from "./pages/manager/ManagerDashboard";
-// import PendingApprovals from "./pages/manager/PendingApprovals";
-// import ApprovalDetail from "./pages/manager/ApprovalDetail";
-// import RoleRoute from "./routes/RoleRoute";
+import ManagerDashboard from "./pages/manager/ManagerDashboard";
+import PendingApprovals from "./pages/manager/ PendingApprovals.jsx";
+import ApprovalDetail from "./pages/manager/ApprovalDetail";
+import RoleRoute from "./routes/RoleRoute";
+import AdminDashboard from "./pages/Admin/Dashboard";
 
 
 export default function App() {
@@ -27,7 +26,7 @@ export default function App() {
             path="/"
             element={
               <ProtectedRoute>
-                <Dashboard />
+                <Landing />
               </ProtectedRoute>
             }
           />
@@ -68,7 +67,7 @@ export default function App() {
             }
           />
 
-          {/* <Route
+          <Route
             path="/manager"
             element={
               <RoleRoute role="manager">
@@ -93,7 +92,15 @@ export default function App() {
                 <ApprovalDetail />
               </RoleRoute>
             }
-          /> */}
+          />
+          <Route
+            path="/admin"
+            element={
+              <RoleRoute role="admin">
+                <AdminDashboard />
+              </RoleRoute>
+            }
+          />
 
           
         </Routes>
