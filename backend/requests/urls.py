@@ -4,12 +4,14 @@ from .views import (
     UploadRequestDocumentAPIView, RequestsListAPIView, RequestDetailAPIView, 
     EmpolyeeDashboardAPIView, ManagerPendingApprovalsAPIView, 
     RequestDocumentListAPIView, MyDocumentsAPIView, MyHistoryAPIView,
-    DepartmentDashboardAPIView, AssetViewSet, AdminDashboardStatsAPIView
+    DepartmentDashboardAPIView, AssetViewSet, AdminDashboardStatsAPIView,
+    AdminRequestViewSet, ManagerDashboardStatsAPIView
 )
 from rest_framework.routers import DefaultRouter
 
 router = DefaultRouter()
 router.register(r'assets', AssetViewSet, basename='asset')
+router.register(r'admin/requests-full', AdminRequestViewSet, basename='admin-requests')
 
 urlpatterns = [
     path('my/', RequestsListAPIView.as_view()),
@@ -27,6 +29,7 @@ urlpatterns = [
     path('pending-for-me/',ManagerPendingApprovalsAPIView.as_view()),
     path('dashboard/<str:department>/', DepartmentDashboardAPIView.as_view()),
     path('admin-stats-dashboard/', AdminDashboardStatsAPIView.as_view()),
+    path('manager-stats/', ManagerDashboardStatsAPIView.as_view()),
 ]
 
 urlpatterns += router.urls

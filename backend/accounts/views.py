@@ -1,10 +1,11 @@
-from rest_framework import generics
+from rest_framework import generics, permissions
 from rest_framework.permissions import IsAuthenticated
 from .permissions import IsAdmin
 from .models import User, Feature, RolePermission, Role, UserRole
 from .serializers import (
     RegisterSerializer, UserSerializer, FeatureSerializer, 
-    RolePermissionSerializer, CustomTokenSerializer
+    RolePermissionSerializer, CustomTokenSerializer, RoleSerializer, 
+    AdminUserSerializer, GroupSerializer
 )
 from rest_framework_simplejwt.views import TokenObtainPairView
 
@@ -12,10 +13,12 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
     serializer_class = RegisterSerializer
+    permission_classes = [permissions.AllowAny]
 
 
 class LoginView(TokenObtainPairView):
     serializer_class = CustomTokenSerializer
+    permission_classes = [permissions.AllowAny]
 
 
 class UserListView(generics.ListAPIView):
@@ -155,5 +158,42 @@ class MyPermissionsView(generics.ListAPIView):
 
         if to_create:
             RolePermission.objects.bulk_create(to_create)
-
         return RolePermission.objects.filter(role__in=user_role_ids, can_access=True)
+
+from rest_framework import viewsets
+from django.contrib.auth.models import Group
+
+class RoleViewSet(viewsets.ModelViewSet):
+    queryset = Role.objects.all()
+    serializer_class = RoleSerializer
+    permission_classes = [permissions.IsAuthenticated, IsAdmin]
+
+class GroupViewSet(viewsets.ModelViewSet):
+    queryset = Group.objects.all()
+    serializer_class = GroupSerializer
+    permission_classes = [permissions.IsAuthenticated, IsAdmin]
+
+class AdminUserViewSet(viewsets.ModelViewSet):
+    queryset = User.objects.all()
+    serializer_class = AdminUserSerializer
+    permission_classes = [permissions.IsAuthenticated, IsAdmin]
+
+    def perform_create(self, serializer):
+        user = serializer.save()
+        password = self.request.data.get("password")
+        if password:
+            user.set_password(password)
+            user.save()
+        
+        role_name = self.request.data.get("role")
+        if role_name:
+            role, _ = Role.objects.get_or_create(name=role_name.lower())
+            UserRole.objects.create(user=user, role=role)
+
+    def perform_update(self, serializer):
+        role_name = self.request.data.get("role")
+        user = serializer.save()
+        if role_name:
+            role, _ = Role.objects.get_or_create(name=role_name.lower())
+            UserRole.objects.filter(user=user).delete()
+            UserRole.objects.create(user=user, role=role)

@@ -147,8 +147,69 @@ class EmpolyeeDashboardAPIView(APIView):
     
 # manager actions
 
-class ApproveRequestAPIView(APIView):
+class ManagerPendingApprovalsAPIView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
 
+    def get(self, request):
+        user = request.user
+
+        # Get all role names for the current user
+        user_roles = user.roles.values_list('role__name', flat=True)
+
+        if not user_roles:
+            return Response(
+                {"message": "You do not have any approver roles."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        # Normalize roles
+        user_roles_norm = {str(r).strip().lower() for r in user_roles if r}
+
+        workflows = RequestWorkFlow.objects.select_related(
+            "request",
+            "current_step",
+            "request__created_by",
+            "request__created_by__manager"
+        ).filter(
+            request__status__in=['pending', 'in_review']
+        )
+
+        requests = []
+
+        for wf in workflows:
+
+            # Skip if no step
+            if not wf.current_step:
+                continue
+
+            # Normalize step role
+            step_role = str(wf.current_step.role_name).strip().lower()
+
+            # 🔥 Manager Step Logic
+            if step_role == 'manager' and 'manager' in user_roles_norm:
+
+                employee = wf.request.created_by
+
+                # Ensure employee exists
+                if not employee:
+                    continue
+
+                # 🔑 FIX: Use manager_id for comparison
+                if employee.manager_id == user.id:
+                    requests.append(wf.request)
+
+                # Optional fallback (unchanged behavior)
+                elif employee.manager is None:
+                    requests.append(wf.request)
+
+            # 🔥 Other Roles (HR, Finance, IT)
+            elif step_role in user_roles_norm:
+                requests.append(wf.request)
+
+        serializer = RequestSerializer(requests, many=True)
+        return Response(serializer.data)
+
+class ApproveRequestAPIView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request, pk):
@@ -157,6 +218,7 @@ class ApproveRequestAPIView(APIView):
 
         try:
             approve_request(request.user, req)
+
             return Response(
                 {"detail": "Approved successfully"},
                 status=status.HTTP_200_OK
@@ -168,9 +230,7 @@ class ApproveRequestAPIView(APIView):
                 status=status.HTTP_403_FORBIDDEN
             )
 
-
 class RejectRequestAPIView(APIView):
-
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request, pk):
@@ -218,12 +278,25 @@ class ManagerPendingApprovalsAPIView(APIView):
         )
 
         # Filter in Python to avoid DB collation/casing issues with __in.
-        requests = [
-            wf.request
-            for wf in workflows
-            if wf.current_step
-            and str(wf.current_step.role_name).strip().lower() in user_roles_norm
-        ]
+        requests = []
+        for wf in workflows:
+            if not wf.current_step:
+                continue
+            
+            step_role = str(wf.current_step.role_name).strip().lower()
+            
+            # If the step is for a "manager", enforce direct manager relationship
+            if step_role == 'manager':
+                if wf.request.created_by.manager == user:
+                    requests.append(wf.request)
+                # Fallback: if user has explicit manager role and requester has no manager, allow
+                elif wf.request.created_by.manager is None and 'manager' in user_roles_norm:
+                    requests.append(wf.request)
+            
+            # Otherwise, use standard role-based access
+            elif step_role in user_roles_norm:
+                requests.append(wf.request)
+
         serializer = RequestSerializer(requests, many=True)
         return Response(serializer.data)
 
@@ -249,6 +322,8 @@ class AdminDashboardStatsAPIView(APIView):
     permission_classes = [permissions.IsAuthenticated, IsAdmin]
 
     def get(self, request):
+        from accounts.models import User
+        total_users = User.objects.count()
         total_requests = Request.objects.count()
         pending_requests = Request.objects.filter(status='pending').count()
         approved_requests = Request.objects.filter(status='approved').count()
@@ -264,12 +339,69 @@ class AdminDashboardStatsAPIView(APIView):
             type_breakdown[t] = Request.objects.filter(request_type=t).count()
 
         return Response({
+            "total_users": total_users,
             "total": total_requests,
             "pending": pending_requests,
             "approved": approved_requests,
             "rejected": rejected_requests,
             "department_breakdown": dept_breakdown,
             "type_breakdown": type_breakdown,
+        })
+
+
+class ManagerDashboardStatsAPIView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        
+        # 1. Awaiting Decision (Pending for this manager)
+        # Get all role names for the current user
+        user_roles = user.roles.values_list('role__name', flat=True)
+        user_roles_norm = {str(r).strip().lower() for r in user_roles if r}
+
+        workflows = RequestWorkFlow.objects.select_related(
+            "request",
+            "current_step",
+            "request__created_by"
+        ).filter(
+            request__status__in=['pending', 'in_review']
+        )
+
+        pending_count = 0
+        for wf in workflows:
+            if not wf.current_step:
+                continue
+            
+            step_role = str(wf.current_step.role_name).strip().lower()
+            
+            # If the step is for a "manager", enforce direct manager relationship
+            if step_role == 'manager':
+                if wf.request.created_by.manager == user:
+                    pending_count += 1
+                elif wf.request.created_by.manager is None and 'manager' in user_roles_norm:
+                    pending_count += 1
+            
+            # Otherwise, use standard role-based access
+            elif step_role in user_roles_norm:
+                pending_count += 1
+
+        # 2. Team Submissions
+        team_submissions_count = Request.objects.filter(created_by__manager=user).count()
+
+        # 3. Monthly Rejections (from team)
+        from django.utils import timezone
+        first_day_of_month = timezone.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        monthly_rejections_count = Request.objects.filter(
+            created_by__manager=user, 
+            status='rejected',
+            updated_at__gte=first_day_of_month
+        ).count()
+
+        return Response({
+            "pending_count": pending_count,
+            "team_submissions_count": team_submissions_count,
+            "monthly_rejections_count": monthly_rejections_count,
         })
 
 
@@ -334,8 +466,25 @@ class DepartmentDashboardAPIView(APIView):
         if dept.lower() not in [r.lower() for r in user_roles] and not request.user.is_superuser:
             return Response({"error": "Unauthorized access to this dashboard"}, status=403)
 
-        # Get requests for this department
-        requests = Request.objects.filter(department=dept).order_by("-created_at")
+        # Only show requests that are currently assigned to this department's
+        # workflow step. This prevents HR users from seeing Finance-step items
+        # and then hitting a 403 on approve/reject.
+        workflows = (
+            RequestWorkFlow.objects
+            .select_related("request", "current_step")
+            .filter(
+                current_step__isnull=False,
+                request__status__in=["pending", "in_review"],
+            )
+            .order_by("-request__created_at")
+        )
+
+        dept_role = dept.lower()
+        requests = [
+            wf.request
+            for wf in workflows
+            if str(wf.current_step.role_name).strip().lower() == dept_role
+        ]
         
         # Specialized data
         data = {
@@ -367,3 +516,13 @@ class AssetViewSet(viewsets.ModelViewSet):
         if user.is_superuser or user.has_role("it"):
             return Asset.objects.all()
         return Asset.objects.filter(assigned_to=user)
+
+
+class AdminRequestViewSet(viewsets.ModelViewSet):
+    queryset = Request.objects.all()
+    serializer_class = RequestSerializer
+    permission_classes = [permissions.IsAuthenticated, IsAdmin]
+
+    def perform_destroy(self, instance):
+        # Additional cleanup if needed (documents, history)
+        instance.delete()

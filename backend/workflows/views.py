@@ -1,8 +1,8 @@
 from rest_framework import viewsets, mixins
 from rest_framework.permissions import BasePermission
 from django.shortcuts import get_object_or_404
-from .models import ApprovalFlow, WorkflowStep
-from .serializers import ApprovalFlowSerializer, WorkflowStepSerializer
+from .models import ApprovalFlow, WorkflowStep, RequestWorkFlow
+from .serializers import ApprovalFlowSerializer, WorkflowStepSerializer, RequestWorkFlowSerializer
 
 class IsAdminOrIT(BasePermission):
     """
@@ -32,3 +32,9 @@ class WorkflowStepViewSet(mixins.CreateModelMixin, mixins.DestroyModelMixin, vie
         flow_id = self.kwargs.get('flow_id')
         flow = get_object_or_404(ApprovalFlow, id=flow_id)
         serializer.save(flow=flow)
+
+
+class AdminWorkFlowViewSet(viewsets.ModelViewSet):
+    queryset = RequestWorkFlow.objects.all()
+    serializer_class = RequestWorkFlowSerializer
+    permission_classes = [IsAdminOrIT]

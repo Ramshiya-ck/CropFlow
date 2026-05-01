@@ -1,7 +1,7 @@
 import { useContext, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../../auth/AuthContext";
-import { getDepartmentDashboard, getAssets, assignAsset } from "../../api/requests";
+import { getDepartmentDashboard } from "../../api/requests";
 
 export default function ITDashboard() {
   const { user, logout } = useContext(AuthContext);
@@ -24,15 +24,6 @@ export default function ITDashboard() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleAssign = async (assetId, userId) => {
-     try {
-       await assignAsset(assetId, { assigned_to: userId, status: 'assigned' });
-       fetchDashboardData();
-     } catch (err) {
-       alert("Assignment failed");
-     }
   };
 
   const handleLogout = () => {
@@ -101,6 +92,14 @@ export default function ITDashboard() {
           </div>
         </header>
 
+        {!loading && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <ITMetric label="Open Queue" value={data.requests.length} tone="blue" />
+            <ITMetric label="Available Assets" value={data.assets.filter((a) => a.status === "available").length} tone="emerald" />
+            <ITMetric label="Assigned Assets" value={data.assets.filter((a) => a.status === "assigned").length} tone="violet" />
+          </div>
+        )}
+
         {loading ? (
           <div className="animate-pulse space-y-4">
             <div className="h-40 bg-slate-200 rounded-3xl w-full"></div>
@@ -124,7 +123,7 @@ export default function ITDashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {data.requests.filter(r => ['hardware','software','asset'].includes(r.request_type)).map(req => (
+                    {data.requests.filter(r => ['hardware','software','asset'].includes(r.request_type?.toLowerCase())).map(req => (
                       <tr key={req.id} className="border-b border-slate-50 hover:bg-slate-50/30 transition-colors">
                         <td className="px-8 py-5 font-bold text-slate-700 capitalize">{req.request_type}</td>
                         <td className="px-8 py-5 text-slate-600 font-medium">{req.created_by_email}</td>
@@ -134,7 +133,7 @@ export default function ITDashboard() {
                         </td>
                       </tr>
                     ))}
-                    {data.requests.filter(r => ['hardware','software','asset'].includes(r.request_type)).length === 0 && (
+                    {data.requests.filter(r => ['hardware','software','asset'].includes(r.request_type?.toLowerCase())).length === 0 && (
                       <tr>
                         <td colSpan="4" className="px-8 py-10 text-center text-slate-400 font-medium">No pending items.</td>
                       </tr>
@@ -179,7 +178,6 @@ export default function ITDashboard() {
                 </div>
               </div>
             )}
-
             {activeTab === "security" && (
               <div className="space-y-6">
                 <div className="bg-[#0f172a] p-8 rounded-3xl text-white shadow-2xl">
@@ -203,7 +201,6 @@ export default function ITDashboard() {
                     </div>
                   </div>
                 </div>
-                
                 <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
                    <h3 className="font-bold text-slate-800 mb-6">Active Security Audits</h3>
                    <div className="space-y-4">
@@ -224,3 +221,20 @@ export default function ITDashboard() {
   );
 }
 
+function ITMetric({ label, value, tone }) {
+  const tones = {
+    blue: "bg-blue-50 text-blue-600",
+    emerald: "bg-emerald-50 text-emerald-600",
+    violet: "bg-violet-50 text-violet-600",
+  };
+
+  return (
+    <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6">
+      <div className={`w-12 h-12 rounded-2xl ${tones[tone]} flex items-center justify-center font-black mb-4`}>
+        {String(value).slice(0, 2)}
+      </div>
+      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{label}</p>
+      <p className="text-3xl font-black text-[#0f172a] mt-1">{value}</p>
+    </div>
+  );
+}

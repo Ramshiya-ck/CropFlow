@@ -12,36 +12,41 @@ export default function History() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-100 p-8">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">Request History</h1>
-        <p className="text-sm text-gray-500">Approval timeline across all your requests.</p>
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(59,130,246,0.10),_transparent_28%),linear-gradient(to_bottom,#f8fafc,#eef2ff)] p-8">
+      <div className="mb-8">
+        <p className="text-[11px] font-black uppercase tracking-[0.25em] text-blue-600">Timeline Archive</p>
+        <h1 className="text-4xl font-black text-[#0f172a] tracking-tight mt-2">Request History</h1>
+        <p className="text-sm text-slate-500 font-medium mt-3">Approval timeline across all your requests.</p>
       </div>
 
-      <div className="bg-white rounded-xl shadow p-6">
+      <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
         {loading ? (
-          <p className="text-gray-500">Loading history...</p>
+          <div className="p-8 text-slate-500">Loading history...</div>
         ) : items.length === 0 ? (
-          <p className="text-gray-500">No history yet.</p>
+          <div className="p-10 text-center text-slate-400 font-medium">No history yet.</div>
         ) : (
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b text-gray-500 text-left">
-                <th className="py-2">Request</th>
-                <th className="py-2">Action</th>
-                <th className="py-2">Comment</th>
-                <th className="py-2">When</th>
+              <tr className="border-b border-slate-100 bg-slate-50/70 text-slate-400 text-left">
+                <th className="py-4 px-6 text-[10px] font-black uppercase tracking-widest">Request</th>
+                <th className="py-4 px-6 text-[10px] font-black uppercase tracking-widest">Action</th>
+                <th className="py-4 px-6 text-[10px] font-black uppercase tracking-widest">Comment</th>
+                <th className="py-4 px-6 text-[10px] font-black uppercase tracking-widest">When</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-slate-50">
               {items.map((h) => (
-                <tr key={h.id} className="border-b last:border-none">
-                  <td className="py-3 font-medium text-gray-800">
-                    {h.request_title} <span className="text-gray-500 text-xs">#{h.request_id}</span>
+                <tr key={h.id} className="hover:bg-slate-50/50 transition-colors">
+                  <td className="py-4 px-6 font-bold text-slate-800">
+                    {h.request_title} <span className="text-slate-400 text-xs">#{h.request_id}</span>
                   </td>
-                  <td className="py-3 capitalize">{h.action}</td>
-                  <td className="py-3 text-gray-600">{h.comment || "—"}</td>
-                  <td className="py-3 text-gray-500">
+                  <td className="py-4 px-6">
+                    <span className="px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-[10px] font-black uppercase tracking-widest">
+                      {h.action}
+                    </span>
+                  </td>
+                  <td className="py-4 px-6 text-slate-600">{h.comment || "—"}</td>
+                  <td className="py-4 px-6 text-slate-500">
                     {new Date(h.created_at).toLocaleString()}
                   </td>
                 </tr>

@@ -8,7 +8,6 @@ export default function Register() {
     email: "",
     password: "",
     confirmPassword: "",
-    role: "employee",
   });
 
   const [loading, setLoading] = useState(false);
@@ -34,7 +33,6 @@ export default function Register() {
         name: form.name,
         email: form.email,
         password: form.password,
-        role: form.role,
       });
 
       navigate("/login");
@@ -76,7 +74,7 @@ export default function Register() {
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div className="grid grid-cols-1 gap-5">
               <div>
                 <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 px-1">
                   Full Name
@@ -90,24 +88,6 @@ export default function Register() {
                   required
                   className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all"
                 />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 px-1">
-                  Corporate Role
-                </label>
-                <select
-                  name="role"
-                  value={form.role}
-                  onChange={handleChange}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all appearance-none cursor-pointer"
-                >
-                  <option value="employee" className="bg-[#1e293b]">Employee</option>
-                  <option value="manager" className="bg-[#1e293b]">Manager</option>
-                  <option value="finance" className="bg-[#1e293b]">Finance</option>
-                  <option value="it" className="bg-[#1e293b]">IT</option>
-                  <option value="hr" className="bg-[#1e293b]">HR</option>
-                </select>
               </div>
             </div>
 

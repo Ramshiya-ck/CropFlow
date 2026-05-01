@@ -47,11 +47,31 @@ class RequestSerializer(serializers.ModelSerializer):
         source="created_by.email",
         read_only=True,
     )
+    current_step_role = serializers.SerializerMethodField()
+    current_step_order = serializers.SerializerMethodField()
 
     class Meta:
         model = Request
         fields = "__all__"
-        read_only_fields = ["id", "created_by", "status"]
+        read_only_fields = ["id", "created_by", "status", "current_step_role", "current_step_order"]
+
+    def get_current_step_role(self, obj):
+        try:
+            workflow = obj.workflow
+            if workflow and workflow.current_step:
+                return workflow.current_step.role_name
+        except Exception:
+            pass
+        return None
+
+    def get_current_step_order(self, obj):
+        try:
+            workflow = obj.workflow
+            if workflow and workflow.current_step:
+                return workflow.current_step.step_order
+        except Exception:
+            pass
+        return None
 
 
 class MyRequestDocumentSerializer(serializers.ModelSerializer):

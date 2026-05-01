@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import User, Feature, RolePermission
+from .models import User, Feature, RolePermission, Role, UserRole
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 
@@ -13,7 +13,8 @@ class RegisterSerializer(serializers.ModelSerializer):
         fields = ["id", "email", "name", "password", "role"]
 
     def create(self, validated_data):
-        role_name = validated_data.pop("role", "employee").lower()
+        # Security: Force default role to 'employee' regardless of frontend input
+        role_name = "employee"
 
         user = User.objects.create_user(
             email=validated_data["email"],
@@ -87,6 +88,35 @@ class RolePermissionSerializer(serializers.ModelSerializer):
     class Meta:
         model = RolePermission
         fields = ["id", "role", "role_name", "feature", "feature_name", "can_access"]
+
+
+class RoleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Role
+        fields = ["id", "name"]
+
+
+class AdminUserSerializer(serializers.ModelSerializer):
+    roles = serializers.SerializerMethodField()
+    manager_name = serializers.ReadOnlyField(source="manager.name")
+    password = serializers.CharField(write_only=True, required=False)
+
+    class Meta:
+        model = User
+        fields = [
+            "id", "email", "name", "roles", "manager", "manager_name",
+            "is_active", "is_staff", "is_superuser", "password"
+        ]
+
+    def get_roles(self, obj):
+        return list(obj.roles.values_list("role__name", flat=True))
+
+
+class GroupSerializer(serializers.ModelSerializer):
+    class Meta:
+        from django.contrib.auth.models import Group
+        model = Group
+        fields = ["id", "name"]
 
 
 class CustomTokenSerializer(TokenObtainPairSerializer):

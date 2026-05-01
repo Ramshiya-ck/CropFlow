@@ -10,6 +10,18 @@ export default function FinanceDashboard() {
   const [data, setData] = useState({ requests: [] });
   const [loading, setLoading] = useState(true);
 
+  const approvalRequests = data.requests.filter(
+    (r) => r.status === "pending" || r.status === "in_review"
+  );
+  const invoiceRequests = data.requests.filter(
+    (r) => r.request_type?.toLowerCase() === "invoice"
+  );
+  const approvedPayments = data.requests.filter((r) => r.status === "approved");
+  const totalAmount = approvalRequests.reduce((sum, req) => {
+    const amount = Number(req.data?.amount || 0);
+    return Number.isFinite(amount) ? sum + amount : sum;
+  }, 0);
+
   useEffect(() => {
     fetchDashboardData();
   }, []);
@@ -31,7 +43,7 @@ export default function FinanceDashboard() {
       if (action === "approve") await approveRequest(id);
       else await rejectRequest(id);
       fetchDashboardData();
-    } catch (err) {
+    } catch {
       alert("Action failed");
     }
   };
@@ -102,6 +114,14 @@ export default function FinanceDashboard() {
           </div>
         </header>
 
+        {!loading && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <MetricCard label="Needs Review" value={approvalRequests.length} tone="emerald" />
+            <MetricCard label="Invoices" value={invoiceRequests.length} tone="amber" />
+            <MetricCard label="Open Amount" value={`$${totalAmount.toLocaleString()}`} tone="blue" />
+          </div>
+        )}
+
         {loading ? (
           <div className="animate-pulse space-y-4">
             <div className="h-40 bg-slate-200 rounded-3xl w-full"></div>
@@ -122,7 +142,7 @@ export default function FinanceDashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {data.requests.filter(r => activeTab === 'approvals' ? ['asset','travel'].includes(r.request_type) : r.request_type === 'invoice').map(req => (
+                    {(activeTab === "approvals" ? approvalRequests : invoiceRequests).map(req => (
                       <tr key={req.id} className="border-b border-slate-50 hover:bg-slate-50/30 transition-colors">
                         <td className="px-8 py-5 font-semibold text-slate-700">{req.created_by_email}</td>
                         <td className="px-8 py-5 text-slate-600 font-medium capitalize">{req.request_type}</td>
@@ -135,13 +155,13 @@ export default function FinanceDashboard() {
                         <td className="px-8 py-5">
                           <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
                             req.status === 'approved' ? 'bg-emerald-100 text-emerald-600' :
-                            req.status === 'pending' ? 'bg-amber-100 text-amber-600' : 'bg-red-100 text-red-600'
+                            (req.status === 'pending' || req.status === 'in_review') ? 'bg-amber-100 text-amber-600' : 'bg-red-100 text-red-600'
                           }`}>
                             {req.status}
                           </span>
                         </td>
                         <td className="px-8 py-5 text-right">
-                          {req.status === 'pending' && (
+                          {(req.status === 'pending' || req.status === 'in_review') && (
                             <div className="flex justify-end gap-2">
                               <button onClick={() => handleAction(req.id, 'approve')} className="px-4 py-2 bg-emerald-500 text-white rounded-xl text-xs font-bold hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/20">Approve</button>
                               <button onClick={() => handleAction(req.id, 'reject')} className="px-4 py-2 bg-red-500 text-white rounded-xl text-xs font-bold hover:bg-red-600 transition-all shadow-lg shadow-red-500/20">Reject</button>
@@ -150,7 +170,7 @@ export default function FinanceDashboard() {
                         </td>
                       </tr>
                     ))}
-                    {data.requests.filter(r => activeTab === 'approvals' ? ['asset','travel'].includes(r.request_type) : r.request_type === 'invoice').length === 0 && (
+                    {(activeTab === "approvals" ? approvalRequests : invoiceRequests).length === 0 && (
                       <tr>
                         <td colSpan="5" className="px-8 py-10 text-center text-slate-400 font-medium">No items found for this view.</td>
                       </tr>
@@ -203,7 +223,7 @@ export default function FinanceDashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {data.requests.filter(r => r.status === 'approved').map(req => (
+                    {approvedPayments.map(req => (
                       <tr key={req.id} className="border-b border-slate-50">
                         <td className="px-8 py-5 font-semibold text-slate-700">{req.created_by_email}</td>
                         <td className="px-8 py-5 text-slate-500 font-mono text-xs font-bold">INV-{req.id}-2024</td>
@@ -216,7 +236,7 @@ export default function FinanceDashboard() {
                         </td>
                       </tr>
                     ))}
-                    {data.requests.filter(r => r.status === 'approved').length === 0 && (
+                    {approvedPayments.length === 0 && (
                       <tr>
                         <td colSpan="5" className="px-8 py-10 text-center text-slate-400 font-medium">No payments pending release.</td>
                       </tr>
@@ -228,6 +248,24 @@ export default function FinanceDashboard() {
           </div>
         )}
       </main>
+    </div>
+  );
+}
+
+function MetricCard({ label, value, tone }) {
+  const tones = {
+    emerald: "from-emerald-500 to-teal-600 text-emerald-600 bg-emerald-50",
+    amber: "from-amber-400 to-orange-500 text-amber-600 bg-amber-50",
+    blue: "from-blue-500 to-indigo-600 text-blue-600 bg-blue-50",
+  };
+
+  return (
+    <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-6">
+      <div className={`w-12 h-12 rounded-2xl ${tones[tone].split(" ").slice(3).join(" ")} flex items-center justify-center mb-4`}>
+        <div className={`w-6 h-6 rounded-full bg-gradient-to-br ${tones[tone].split(" ").slice(0,2).join(" ")}`} />
+      </div>
+      <p className="text-xs font-black text-slate-400 uppercase tracking-widest">{label}</p>
+      <p className="text-3xl font-black text-[#0f172a] mt-1">{value}</p>
     </div>
   );
 }

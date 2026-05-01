@@ -10,25 +10,24 @@ export default function Landing() {
     if (loading) return;
 
     if (user && user.roles && user.roles.length > 0) {
-      const role = user.roles[0].toLowerCase();
-      if (role === "employee") {
-        navigate("/employee");
-      } else if (role === "manager") {
-        navigate("/manager");
-      } else if (role === "finance") {
-        navigate("/finance");
-      } else if (role === "it") {
-        navigate("/it");
-      } else if (role === "hr") {
-        navigate("/hr");
-      } else if (role === "admin") {
+      const roles = user.roles.map(r => r.toLowerCase());
+
+      if (roles.includes("admin")) {
         navigate("/admin");
+      } else if (roles.includes("hr")) {
+        navigate("/hr");
+      } else if (roles.includes("finance")) {
+        navigate("/finance");
+      } else if (roles.includes("it")) {
+        navigate("/it");
+      } else if (roles.includes("manager")) {
+        navigate("/manager");
+      } else if (roles.includes("employee")) {
+        navigate("/employee");
       } else {
-        // Fallback or general dashboard if implemented
-        navigate("/employee"); 
+        navigate("/employee");
       }
     } else {
-      // If no role or user not loaded properly, go to login or a default
       navigate("/login");
     }
   }, [user, loading, navigate]);

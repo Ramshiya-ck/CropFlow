@@ -13,3 +13,12 @@ class ApprovalFlowSerializer(serializers.ModelSerializer):
     class Meta:
         model = ApprovalFlow
         fields = ['id', 'name', 'request_type', 'is_active', 'created_at', 'updated_at', 'steps']
+
+
+class RequestWorkFlowSerializer(serializers.ModelSerializer):
+    request_title = serializers.ReadOnlyField(source="request.title")
+    current_step_name = serializers.ReadOnlyField(source="current_step.role_name")
+
+    class Meta:
+        model = RequestWorkFlow
+        fields = ["id", "request", "request_title", "flow", "current_step", "current_step_name", "started_at"]

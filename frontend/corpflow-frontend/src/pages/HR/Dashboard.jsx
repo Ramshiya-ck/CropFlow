@@ -4,7 +4,7 @@ import { AuthContext } from "../../auth/AuthContext";
 import { getDepartmentDashboard, approveRequest, rejectRequest } from "../../api/requests";
 
 export default function HRDashboard() {
-  const { user, logout, hasPermission } = useContext(AuthContext);
+  const { user, logout } = useContext(AuthContext);
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("leaves");
   const [data, setData] = useState({ requests: [], employees: [] });
@@ -31,7 +31,7 @@ export default function HRDashboard() {
       if (action === "approve") await approveRequest(id);
       else await rejectRequest(id);
       fetchDashboardData();
-    } catch (err) {
+    } catch {
       alert("Action failed");
     }
   };
@@ -103,6 +103,14 @@ export default function HRDashboard() {
           </div>
         </header>
 
+        {!loading && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <DashCard label="Open HR Queue" value={data.requests.length} tone="fuchsia" />
+            <DashCard label="Employees" value={data.employees.length} tone="violet" />
+            <DashCard label="Leave Requests" value={data.requests.filter((r) => r.request_type?.toLowerCase() === "leave").length} tone="emerald" />
+          </div>
+        )}
+
         {loading ? (
           <div className="animate-pulse space-y-4">
             <div className="h-40 bg-slate-200 rounded-3xl w-full"></div>
@@ -122,20 +130,20 @@ export default function HRDashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {data.requests.filter(r => r.request_type === 'leave').map(req => (
+                    {data.requests.filter(r => r.request_type.toLowerCase() === 'leave').map(req => (
                       <tr key={req.id} className="border-b border-slate-50 hover:bg-slate-50/30 transition-colors">
                         <td className="px-8 py-5 font-semibold text-slate-700">{req.created_by_email}</td>
                         <td className="px-8 py-5 text-slate-600 font-medium capitalize">{req.request_type}</td>
                         <td className="px-8 py-5">
                           <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
                             req.status === 'approved' ? 'bg-emerald-100 text-emerald-600' :
-                            req.status === 'pending' ? 'bg-amber-100 text-amber-600' : 'bg-red-100 text-red-600'
+                            (req.status === 'pending' || req.status === 'in_review') ? 'bg-amber-100 text-amber-600' : 'bg-red-100 text-red-600'
                           }`}>
                             {req.status}
                           </span>
                         </td>
                         <td className="px-8 py-5 text-right">
-                          {req.status === 'pending' && (
+                          {(req.status === 'pending' || req.status === 'in_review') && (
                             <div className="flex justify-end gap-2">
                               <button onClick={() => handleAction(req.id, 'approve')} className="px-4 py-2 bg-emerald-500 text-white rounded-xl text-xs font-bold hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/20">Approve</button>
                               <button onClick={() => handleAction(req.id, 'reject')} className="px-4 py-2 bg-red-500 text-white rounded-xl text-xs font-bold hover:bg-red-600 transition-all shadow-lg shadow-red-500/20">Reject</button>
@@ -144,7 +152,7 @@ export default function HRDashboard() {
                         </td>
                       </tr>
                     ))}
-                    {data.requests.filter(r => r.request_type === 'leave').length === 0 && (
+                    {data.requests.filter(r => r.request_type.toLowerCase() === 'leave').length === 0 && (
                       <tr>
                         <td colSpan="4" className="px-8 py-10 text-center text-slate-400 font-medium">No pending leave requests found.</td>
                       </tr>
@@ -202,7 +210,7 @@ export default function HRDashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {data.requests.filter(r => r.request_type === 'clearance').map(req => (
+                    {data.requests.filter(r => r.request_type.toLowerCase() === 'clearance').map(req => (
                       <tr key={req.id} className="border-b border-slate-50">
                         <td className="px-8 py-5 font-semibold text-slate-700">{req.created_by_email}</td>
                         <td className="px-8 py-5 text-slate-600 font-medium">Operations</td>
@@ -214,7 +222,7 @@ export default function HRDashboard() {
                         </td>
                       </tr>
                     ))}
-                    {data.requests.filter(r => r.request_type === 'clearance').length === 0 && (
+                    {data.requests.filter(r => r.request_type.toLowerCase() === 'clearance').length === 0 && (
                       <tr>
                         <td colSpan="4" className="px-8 py-10 text-center text-slate-400 font-medium">No active clearance processes.</td>
                       </tr>
@@ -226,6 +234,24 @@ export default function HRDashboard() {
           </div>
         )}
       </main>
+    </div>
+  );
+}
+
+function DashCard({ label, value, tone }) {
+  const tones = {
+    fuchsia: "bg-fuchsia-50 text-fuchsia-600",
+    violet: "bg-violet-50 text-violet-600",
+    emerald: "bg-emerald-50 text-emerald-600",
+  };
+
+  return (
+    <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6">
+      <div className={`w-12 h-12 rounded-2xl ${tones[tone]} flex items-center justify-center font-black mb-4`}>
+        {String(value).slice(0, 2)}
+      </div>
+      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{label}</p>
+      <p className="text-3xl font-black text-[#0f172a] mt-1">{value}</p>
     </div>
   );
 }
